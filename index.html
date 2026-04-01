@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monoqyy - Cloud System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;900&display=swap');
+        body { background: #ffe4e1; font-family: 'Poppins', sans-serif; background-image: radial-gradient(#ff69b4 0.2px, transparent 0.2px); background-size: 15px 15px; }
+        .pink-glass { background: rgba(255, 192, 203, 0.5); backdrop-filter: blur(15px); border: 2px solid #ff69b4; box-shadow: 0 10px 40px rgba(255, 105, 180, 0.3); }
+        .input-pink { background: #ffffff; border: 2px solid #ffb6c1; transition: 0.3s; color: #ff1493; font-weight: bold; }
+        .input-pink:focus { border-color: #ff1493; outline: none; box-shadow: 0 0 10px rgba(255, 20, 147, 0.2); }
+        .hidden { display: none; }
+        .secret-y { cursor: pointer; user-select: none; }
+        .locked-feature { filter: grayscale(1) blur(3px); pointer-events: none; opacity: 0.6; position: relative; }
+        .lock-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 20; color: white; font-weight: 900; }
+        .cell { width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 900; cursor: pointer; border: 3px solid #ff69b4; border-radius: 15px; background: white; color: #ff1493; }
+    </style>
+</head>
+<body>
+
+<div class="container mx-auto p-4 max-w-md min-h-screen flex flex-col justify-center">
+    
+    <div id="loginSection" class="pink-glass p-10 rounded-[50px] text-center relative border-4 border-white">
+        <h1 class="text-4xl font-black text-pink-600 mb-8 italic uppercase tracking-tighter">
+            MONO<span class="text-pink-600">Q</span><span class="secret-y text-white" onclick="bypassToAdmin()">Y</span><span class="text-white">Y</span>
+        </h1>
+        <div class="space-y-4 mb-6">
+            <input type="text" id="username" placeholder="USERNAME" class="input-pink w-full p-4 rounded-2xl uppercase shadow-sm">
+            <input type="password" id="password" placeholder="PASSWORD" class="input-pink w-full p-4 rounded-2xl shadow-sm">
+        </div>
+        <button onclick="checkLogin()" class="w-full bg-pink-500 text-white font-black py-4 rounded-2xl shadow-xl hover:bg-pink-600 transition-all uppercase">AUTHORIZE ACCESS</button>
+        <p class="mt-4 text-[9px] text-pink-400 font-bold tracking-[0.2em]">DATABASE: ONLINE (FIREBASE)</p>
+    </div>
+
+    <div id="adminPanel" class="hidden space-y-6">
+        <div class="pink-glass p-8 rounded-[40px] border-4 border-white bg-pink-500/10 shadow-2xl">
+            <h2 class="text-2xl font-black text-pink-700 mb-6 text-center italic border-b-2 border-white pb-2 uppercase">
+                ADMIN MONO<span class="text-pink-700">Q</span><span class="text-white">YY</span>
+            </h2>
+            <div class="space-y-4">
+                <input type="text" id="newUsername" placeholder="User Baru" class="input-pink w-full p-4 rounded-xl uppercase">
+                <input type="text" id="newPassword" placeholder="Pass Baru" class="input-pink w-full p-4 rounded-xl">
+                <input type="date" id="expiryDate" class="input-pink w-full p-4 rounded-xl">
+                
+                <select id="accStatus" class="input-pink w-full p-4 rounded-xl uppercase">
+                    <option value="VIP">STATUS: VIP (FULL)</option>
+                    <option value="TRIAL">STATUS: UJI COBA (TRIAL)</option>
+                    <option value="LOCKED">STATUS: TERKUNCI (BANNED)</option>
+                </select>
+
+                <button onclick="createNewAccount()" class="w-full bg-white text-pink-600 font-black py-4 rounded-2xl border-2 border-pink-400 uppercase shadow-lg mt-4 hover:bg-pink-50">
+                    SIMPAN KE CLOUD
+                </button>
+            </div>
+            <button onclick="location.reload()" class="w-full mt-6 text-[10px] font-black text-white bg-pink-600 py-2 rounded-full uppercase">Logout</button>
+        </div>
+    </div>
+
+    <div id="userLobby" class="hidden space-y-6">
+        <div class="pink-glass p-6 rounded-[30px] flex justify-between items-center border-b-4 border-white">
+            <div>
+                <p class="text-[9px] font-black text-white uppercase bg-pink-500 px-2 rounded-full w-fit">Status: <span id="displayStatus"></span></p>
+                <h2 class="text-xl font-black text-pink-700 italic uppercase">User: <span id="displayUser"></span></h2>
+            </div>
+            <button onclick="location.reload()" class="bg-white text-pink-500 w-10 h-10 rounded-full shadow-md"><i class="fas fa-power-off"></i></button>
+        </div>
+
+        <div class="pink-glass p-6 rounded-[35px] text-center border-4 border-white">
+            <h3 class="font-black text-pink-600 mb-4 uppercase italic tracking-widest">Tic Tac Toe</h3>
+            <div class="grid grid-cols-3 gap-2 w-fit mx-auto" id="board">
+                <div class="cell" onclick="playerMove(0)"></div><div class="cell" onclick="playerMove(1)"></div><div class="cell" onclick="playerMove(2)"></div>
+                <div class="cell" onclick="playerMove(3)"></div><div class="cell" onclick="playerMove(4)"></div><div class="cell" onclick="playerMove(5)"></div>
+                <div class="cell" onclick="playerMove(6)"></div><div class="cell" onclick="playerMove(7)"></div><div class="cell" onclick="playerMove(8)"></div>
+            </div>
+        </div>
+
+        <div id="spammerFeature" class="pink-glass p-6 rounded-[35px] border-4 border-red-400 relative overflow-hidden">
+            <div id="lockLabel" class="hidden lock-overlay bg-black/60 rounded-[30px]">
+                <div class="text-center">
+                    <i class="fas fa-lock text-3xl mb-2"></i><br>KHUSUS VIP BOSS!
+                </div>
+            </div>
+            <h3 class="font-black text-red-600 mb-4 uppercase italic"><i class="fas fa-skull"></i> NGL SPAMMER</h3>
+            <input type="text" id="nglTarget" placeholder="Target USN..." class="w-full p-3 mb-2 rounded-xl border-none outline-none text-sm">
+            <button onclick="alert('Spamming Started!')" class="w-full bg-black text-white py-3 rounded-xl font-black uppercase shadow-lg">START ATTACK</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // DATA FIREBASE PUNYA BOSS MONOQYY
+    const firebaseConfig = {
+      apiKey: "AIzaSyAomPrM_Augx9f7975jmFwBzCU3UN1TU3s",
+      authDomain: "monoqyyy.firebaseapp.com",
+      databaseURL: "https://monoqyyy-default-rtdb.firebaseio.com", // Gue tambahin otomatis biar konek database
+      projectId: "monoqyyy",
+      storageBucket: "monoqyyy.firebasestorage.app",
+      messagingSenderId: "613227713837",
+      appId: "1:613227713837:web:76b94d827d0eda1c50afa4",
+      measurementId: "G-PZGBB0RX34"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // BYPASS KE ADMIN (KLIK HURUF Y PUTIH)
+    function bypassToAdmin() {
+        document.getElementById('loginSection').classList.add('hidden');
+        document.getElementById('adminPanel').classList.remove('hidden');
+    }
+
+    // LOGIN SYSTEM (READ)
+    function checkLogin() {
+        const u = document.getElementById('username').value.toLowerCase();
+        const p = document.getElementById('password').value;
+
+        if(!u || !p) return alert("ISI USN/PASS BOSS!");
+
+        db.ref('users/' + u).once('value').then((snapshot) => {
+            const data = snapshot.val();
+            if (data && data.pass === p) {
+                if (data.status === "LOCKED") return alert("AKUN LU DIKUNCI! HUBUNGI MONOQYY.");
+                
+                let today = new Date().toISOString().split('T')[0];
+                if (today > data.expiry) return alert("MASA AKTIF HABIS BOSS!");
+
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('userLobby').classList.remove('hidden');
+                document.getElementById('displayUser').innerText = u;
+                document.getElementById('displayStatus').innerText = data.status;
+
+                if (data.status === "TRIAL") {
+                    document.getElementById('spammerFeature').classList.add('locked-feature');
+                    document.getElementById('lockLabel').classList.remove('hidden');
+                }
+            } else {
+                alert("DATA SALAH / TIDAK ADA!");
+            }
+        });
+    }
+
+    // CREATE ACCOUNT (WRITE)
+    function createNewAccount() {
+        const u = document.getElementById('newUsername').value.toLowerCase();
+        const p = document.getElementById('newPassword').value;
+        const e = document.getElementById('expiryDate').value;
+        const s = document.getElementById('accStatus').value;
+
+        if (!u || !p || !e) return alert("SEMUA DATA WAJIB DIISI!");
+
+        db.ref('users/' + u).set({
+            pass: p,
+            expiry: e,
+            status: s
+        }).then(() => {
+            alert(`SUKSES! Akun ${u} Aktif sebagai ${s}`);
+            document.getElementById('newUsername').value = "";
+            document.getElementById('newPassword').value = "";
+        });
+    }
+
+    // GAME ENGINE (Tic Tac Toe)
+    let board = ["","","","","","","","",""];
+    const cells = document.querySelectorAll('.cell');
+    function playerMove(i) {
+        if(board[i]==="") {
+            board[i]="X"; cells[i].innerText="X";
+            if(!checkWin()) setTimeout(botMove, 300);
+        }
+    }
+    function botMove() {
+        let empty = board.map((v, i) => v === "" ? i : null).filter(v => v !== null);
+        if(empty.length > 0) {
+            let m = empty[Math.floor(Math.random() * empty.length)];
+            board[m]="O"; cells[m].innerText="O"; checkWin();
+        }
+    }
+    function checkWin() {
+        const w = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+        for(let p of w) if(board[p[0]]!=="" && board[p[0]]===board[p[1]] && board[p[0]]===board[p[2]]) { alert(board[p[0]] + " MENANG!"); reset(); return true; }
+        if(!board.includes("")) { alert("SERI!"); reset(); return true; }
+        return false;
+    }
+    function reset() { board = ["","","","","","","","",""]; cells.forEach(c => c.innerText = ""); }
+</script>
+</body>
+</html>
